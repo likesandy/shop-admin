@@ -11,7 +11,8 @@ REQUIRED = {
     'com.acme.admin.DataScopeRulesTest': 4,
     'com.acme.admin.MigrationUpgradeTest': 1,
     'com.acme.admin.MetricsSecurityTest': 1,
-    'com.acme.admin.generator.CrudGeneratorTest': 1,
+    'com.acme.admin.generator.CrudGeneratorTest': 3,
+    'com.acme.admin.example.GeneratedNoteTest': 5,
 }
 
 

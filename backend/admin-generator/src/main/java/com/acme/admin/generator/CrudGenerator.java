@@ -47,7 +47,9 @@ public final class CrudGenerator {
                 if (!column.matches("[a-z][a-z0-9_]*")) throw new IllegalArgumentException("Unsupported column: " + column);
                 String field = camel(column);
                 columns.add(Map.of("column", column, "field", field, "getter", Character.toUpperCase(field.charAt(0)) + field.substring(1),
-                        "type", javaType(rs.getInt("DATA_TYPE"))));
+                        "type", javaType(rs.getInt("DATA_TYPE")),
+                        "required", rs.getInt("NULLABLE") == DatabaseMetaData.columnNoNulls,
+                        "length", rs.getInt("COLUMN_SIZE")));
             }
         }
         if (columns.isEmpty()) throw new IllegalArgumentException("Table not found or has no columns: " + table);
@@ -67,9 +69,19 @@ public final class CrudGenerator {
         model.put("className", className);
         model.put("permission", resource.replace('-', ':'));
         model.put("columns", columns);
+        boolean ownerScoped = columns.stream().anyMatch(c -> c.get("column").equals("owner_id"));
+        if (ownerScoped && columns.stream().noneMatch(c -> c.get("column").equals("owner_id")
+                && c.get("type").equals("Long") && Boolean.TRUE.equals(c.get("required"))))
+            throw new IllegalArgumentException("owner_id must be BIGINT NOT NULL for owner-scoped CRUD");
+        model.put("ownerScoped", ownerScoped);
+        var inputs = columns.stream().filter(c -> !c.get("column").equals("id")
+                && !c.get("column").equals("owner_id")).toList();
+        if (inputs.isEmpty()) throw new IllegalArgumentException("CRUD requires at least one writable business column");
+        model.put("inputs", inputs);
         Path javaDir = output.resolve("backend/com/acme/admin/generated");
         Map<String, Path> targets = Map.of(
                 "Entity.java.ftl", javaDir.resolve(className + "Entity.java"),
+                "Input.java.ftl", javaDir.resolve(className + "Input.java"),
                 "Mapper.java.ftl", javaDir.resolve(className + "Mapper.java"),
                 "Service.java.ftl", javaDir.resolve(className + "Service.java"),
                 "Controller.java.ftl", javaDir.resolve(className + "Controller.java"),

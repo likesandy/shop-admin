@@ -1,4 +1,5 @@
 import importlib.util
+import ast
 from pathlib import Path
 import shutil
 import subprocess
@@ -32,6 +33,44 @@ class ReportGateTest(unittest.TestCase):
         (self.directory / 'TEST-com.acme.admin.MySqlTest.xml').unlink()
         with self.assertRaisesRegex(ValueError, 'Missing/incomplete'):
             reports.check(self.backend)
+
+    def test_rejects_missing_generated_business_suite(self):
+        (self.directory / 'TEST-com.acme.admin.example.GeneratedNoteTest.xml').unlink()
+        with self.assertRaisesRegex(ValueError, 'Missing/incomplete'):
+            reports.check(self.backend)
+
+    def test_generated_service_requires_coverage_report_and_fifty_percent(self):
+        root = Path(self.temp.name)
+        (root / 'scripts').mkdir()
+        shutil.copy(SCRIPTS / 'check-coverage.py', root / 'scripts/check-coverage.py')
+        tree = ast.parse((SCRIPTS / 'check-coverage.py').read_text())
+        gates = next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.Assign)
+                     and any(isinstance(t, ast.Name) and t.id == 'gates' for t in n.targets))
+        self.assertEqual(.50, gates['generated/NoteService'])
+        fixtures = {}
+        for name in gates:
+            module = 'admin-generator' if name.startswith('generator/') else (
+                'admin-generated-example' if name.startswith('generated/') else 'admin-starter')
+            report = fixtures.setdefault(module, ET.Element('report'))
+            cls = ET.SubElement(report, 'class', name='com/acme/admin/' + name)
+            ET.SubElement(cls, 'counter', type='LINE', covered='100', missed='0')
+        for module, report in fixtures.items():
+            folder = 'jacoco-aggregate' if module == 'admin-starter' else 'jacoco'
+            target = self.backend / module / 'target/site' / folder / 'jacoco.xml'
+            target.parent.mkdir(parents=True)
+            ET.ElementTree(report).write(target)
+        target = self.backend / 'admin-generated-example/target/site/jacoco/jacoco.xml'
+        report = fixtures['admin-generated-example']
+        cls = next(c for c in report if c.attrib['name'].endswith('generated/NoteService'))
+        cls.find('counter').set('covered', '49')
+        cls.find('counter').set('missed', '51')
+        ET.ElementTree(report).write(target)
+        result = subprocess.run(['python3', str(root / 'scripts/check-coverage.py')], capture_output=True, text=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('generated/NoteService < 50%', result.stderr)
+        target.unlink()
+        result = subprocess.run(['python3', str(root / 'scripts/check-coverage.py')], capture_output=True, text=True)
+        self.assertNotEqual(0, result.returncode)
 
     def test_rejects_skipped_redis_test_even_with_green_summary(self):
         path = self.directory / 'TEST-com.acme.admin.RedisCacheTest.xml'

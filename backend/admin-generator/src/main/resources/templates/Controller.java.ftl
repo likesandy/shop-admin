@@ -2,6 +2,7 @@ package com.acme.admin.generated;
 
 import com.acme.admin.common.Api;
 import com.acme.admin.common.Audited;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -17,9 +18,9 @@ public class ${className}Controller {
     @GetMapping("/{id}") @PreAuthorize("@access.has('${permission}:read')")
     public Api<${className}Entity> get(@PathVariable long id) { return Api.ok(service.get(id)); }
     @PostMapping @PreAuthorize("@access.has('${permission}:write')") @Audited("新增${className}")
-    public Api<Long> create(@RequestBody ${className}Entity value) { return Api.ok(service.create(value)); }
+    public Api<Long> create(@Valid @RequestBody ${className}Input value) { return Api.ok(service.create(value)); }
     @PutMapping("/{id}") @PreAuthorize("@access.has('${permission}:write')") @Audited("修改${className}")
-    public Api<Void> update(@PathVariable long id, @RequestBody ${className}Entity value) { service.update(id, value); return Api.ok(null); }
+    public Api<Void> update(@PathVariable long id, @Valid @RequestBody ${className}Input value) { service.update(id, value); return Api.ok(null); }
     @DeleteMapping("/{id}") @PreAuthorize("@access.has('${permission}:write')") @Audited("删除${className}")
     public Api<Void> delete(@PathVariable long id) { service.delete(id); return Api.ok(null); }
 }
