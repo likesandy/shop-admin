@@ -10,6 +10,7 @@ REQUIRED = {
     'com.acme.admin.RedisCacheTest': 4,
     'com.acme.admin.DataScopeRulesTest': 4,
     'com.acme.admin.MigrationUpgradeTest': 1,
+    'com.acme.admin.MetricsSecurityTest': 1,
     'com.acme.admin.generator.CrudGeneratorTest': 1,
 }
 

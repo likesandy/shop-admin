@@ -1,0 +1,11 @@
+groups:
+  - name: shop-admin
+    rules:
+      - alert: ShopAdminBackendDown
+        expr: up{job="shop-admin"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: Shop Admin backend metrics are unavailable
+          description: The backend scrape has failed for at least 30 seconds. Check the process, network and scrape credentials.

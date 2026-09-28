@@ -91,7 +91,7 @@ DB_URL='jdbc:mysql://localhost:3306/shop_admin' DB_USER=shop_admin DB_PASSWORD='
 
 先检查生成结果、补输入校验和业务规则，再复制后端文件到 `admin-system`，配置权限码与菜单，导出 OpenAPI 并将前端页面改为类型化 client 调用。生成页只是起步模板；集成后补真实断言的测试，才进入 CI。已有文件不会被生成器覆盖。
 
-自动 staging：配置带 staging 标签的 self-hosted runner、staging environment、对应 secrets，并设置仓库变量 STAGING_ENABLED=true 和 STAGING_URL。部署后流水线会检查该 URL，并以 15 分钟为超时门槛。代码已关联私有仓库 likesandy/shop-admin；staging 尚未启用，未执行真实上线。
+自动 staging：配置带 staging 标签的 self-hosted runner、staging environment、对应 secrets，并设置仓库变量 STAGING_ENABLED=true 和 STAGING_URL。部署后流水线会检查该 URL，并以 15 分钟为超时门槛。代码已关联公开仓库 likesandy/shop-admin；staging 尚未启用，未执行真实上线。
 
 备份：`bash scripts/backup.sh`；恢复：`bash scripts/restore.sh backups/xxx.sql`（会暂停应用写入）；应用回滚：`bash scripts/rollback.sh previous-commit-sha`。数据库迁移不自动逆向执行，采用向后兼容迁移。
 
@@ -112,8 +112,10 @@ scripts/          开发、契约、覆盖率、部署与恢复
 
 ## 验证记录与边界
 
-- 后端当前共 40 个测试通过：H2 HTTP 13 个、MySQL HTTP/并发 17 个、MySQL + Redis 缓存 4 个、数据范围单测 4 个、迁移升级 1 个、生成器 1 个，零失败、零跳过。
-- 核心类及拆分后的服务/仓储行覆盖率门槛为 70%，生成器为 50%；当前全部通过，明细见 docs/backend-refactoring.md。
+- 本地收尾清单、异常重启和告警验收见 [后端最终验收](docs/backend-final-acceptance.md)。可选指标采集的启动方式见 [监控说明](docs/monitoring.md)。
+- 本地 Docker Compose 部署、容器重建持久化及独立环境备份恢复已通过，见 [本地部署验收记录](docs/compose-acceptance.md)。无需测试服务器即可复现；远程 staging 尚未验收。
+- 后端当前共 41 个测试通过：H2 HTTP 13 个、MySQL HTTP/并发 17 个、MySQL + Redis 缓存 4 个、数据范围单测 4 个、迁移升级 1 个、生成器 1 个、独立指标认证 1 个，零失败、零跳过。
+- 核心类及拆分后的服务/仓储行覆盖率门槛为 70%，包含字典、部门缓存、审计和指标认证；生成器为 50%。门禁入口为 `bash scripts/verify-backend.sh`。
 - 前端 TypeScript 类型检查及 Vite 生产构建通过。
 - Playwright 管理员与普通员工两条浏览器用例已在本地通过；仍需在 CI 环境复验。
 - 缓存为最终一致，TTL 约 5～7 分钟；持久化补偿不能提供强一致语义。
@@ -138,4 +140,4 @@ scripts/          开发、契约、覆盖率、部署与恢复
 
 ## GitHub CI 状态
 
-私有仓库为 [likesandy/shop-admin](https://github.com/likesandy/shop-admin)，主分支 main。[首次完整 CI](https://github.com/likesandy/shop-admin/actions/runs/36397408929) 已通过，包含统一后端门禁、前端验证与镜像构建，staging 未启用。当前 GitHub 套餐不支持此私有仓库的分支保护，因此自动检查已生效，但失败禁止合并尚未强制生效。细节见 [github-ci.md](docs/github-ci.md)。
+公开仓库为 [likesandy/shop-admin](https://github.com/likesandy/shop-admin)，主分支 main。[首次完整 CI](https://github.com/likesandy/shop-admin/actions/runs/36397408929) 已通过，包含统一后端门禁、前端验证与镜像构建，staging 未启用。main 已开启分支保护：必须通过 PR、verify 检查通过且分支保持最新，管理员同样受限，禁止强推与删除。细节见 [github-ci.md](docs/github-ci.md)。

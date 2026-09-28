@@ -81,6 +81,20 @@ class FullStackTest {
      var child = new HashMap<String, Object>(Map.of("code", "split:read", "name", "测试权限", "type", "API", "parentId", parent));
      assertEquals(200, call("POST", "/api/permissions", token, child).status());
      long id = db.sql("select id from sys_perm where code='split:read'").query(Long.class).single();
+     var parentUpdate = new HashMap<String, Object>(Map.of("code", "menu:split_test",
+             "name", "更新后的菜单", "type", "MENU", "path", "/split-updated"));
+     assertEquals(200, call("PUT", "/api/permissions/" + parent, token, parentUpdate).status());
+     assertEquals("更新后的菜单", db.sql("select name from sys_perm where id=?").param(parent).query(String.class).single());
+     assertEquals("/split-updated", db.sql("select path from sys_perm where id=?").param(parent).query(String.class).single());
+     for (String type : List.of("API", "BUTTON")) {
+         parentUpdate.put("type", type);
+         parentUpdate.put("name", "不应保存的名称");
+         assertEquals(400, call("PUT", "/api/permissions/" + parent, token, parentUpdate).status(),
+                 "A parent with children must remain a menu");
+         assertEquals("MENU", db.sql("select type from sys_perm where id=?").param(parent).query(String.class).single());
+         assertEquals("更新后的菜单", db.sql("select name from sys_perm where id=?").param(parent).query(String.class).single());
+         assertEquals(parent, db.sql("select parent_id from sys_perm where id=?").param(id).query(Long.class).single());
+     }
      assertEquals(400, call("DELETE", "/api/permissions/" + parent, token, null).status());
      child.put("parentId", id);
      assertEquals(400, call("PUT", "/api/permissions/" + id, token, child).status());
@@ -90,6 +104,11 @@ class FullStackTest {
      child.put("type", "MENU");
      assertEquals(400, call("PUT", "/api/permissions/" + id, token, child).status());
      assertEquals(200, call("DELETE", "/api/permissions/" + id, token, null).status());
+     for (String type : List.of("API", "BUTTON")) {
+         parentUpdate.put("type", type);
+         assertEquals(200, call("PUT", "/api/permissions/" + parent, token, parentUpdate).status());
+         assertEquals(type, db.sql("select type from sys_perm where id=?").param(parent).query(String.class).single());
+     }
      assertEquals(200, call("DELETE", "/api/permissions/" + parent, token, null).status());
  }
 

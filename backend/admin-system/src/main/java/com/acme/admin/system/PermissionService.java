@@ -27,6 +27,9 @@ public class PermissionService {
     @Transactional
     public void savePermission(Long id, PermissionInput input) {
         if (id != null && id < 1000) throw Problem.bad("内置权限受保护");
+        if (id != null && !input.type().equals("MENU") && permissions.hasChildren(id)) {
+            throw Problem.bad("该菜单仍有子权限，不能修改为非菜单类型");
+        }
         if (input.parentId() != null) {
             if (input.parentId().equals(id)) throw Problem.bad("不能关联自己");
             var parent = permissions.type(input.parentId());
