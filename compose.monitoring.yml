@@ -1,0 +1,26 @@
+# Optional local monitoring. Supply METRICS_PASSWORD with >=32 random characters.
+services:
+  backend:
+    environment:
+      APP_METRICS_ENABLED: 'true'
+      APP_METRICS_PASSWORD: ${METRICS_PASSWORD:?Set METRICS_PASSWORD}
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    environment:
+      METRICS_PASSWORD: ${METRICS_PASSWORD:?Set METRICS_PASSWORD}
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - 'umask 077; printf "%s" "$$METRICS_PASSWORD" > /tmp/metrics-password; unset METRICS_PASSWORD; exec /bin/prometheus "$$@"'
+      - --
+    command: ['--config.file=/etc/prometheus/prometheus.yml', '--storage.tsdb.retention.time=7d']
+    ports: ['127.0.0.1:${PROMETHEUS_PORT:-9090}:9090']
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      backend: {condition: service_healthy}
+    restart: unless-stopped
+volumes:
+  prometheus_data:
