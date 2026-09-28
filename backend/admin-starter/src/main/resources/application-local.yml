@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/shop;MODE=MySQL;DATABASE_TO_LOWER=TRUE;NON_KEYWORDS=VALUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ''
+app:
+  jwt-secret: local-only-secret-change-in-production-0123456789
+  admin-password: Admin-local-2026!
+  demo: true
+  cache-enabled: false
+management:
+  health:
+    redis:
+      enabled: false
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

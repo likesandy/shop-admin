@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: shop-admin
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/shop_admin?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC}
+    username: ${DB_USER:shop_admin}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 500ms
+  flyway:
+    enabled: true
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+app:
+  jwt-secret: ${JWT_SECRET}
+  admin-password: ${ADMIN_PASSWORD}
+  demo: false
+  cache-enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+springdoc:
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:false}
+  swagger-ui:
+    enabled: ${API_DOCS_ENABLED:false}

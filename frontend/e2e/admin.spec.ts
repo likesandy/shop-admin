@@ -1,0 +1,10 @@
+import {test,expect} from '@playwright/test';
+test('管理员登录、创建用户、分配角色、审计与退出',async({page})=>{
+ await page.goto('/');await page.getByLabel('账号',{exact:true}).fill('admin');await page.getByLabel('密码',{exact:true}).fill('Admin-local-2026!');await page.getByRole('button',{name:'登录工作空间'}).click();await expect(page.getByText('你好，admin')).toBeVisible();
+ await page.getByRole('menuitem',{name:'用户管理'}).click();await page.getByRole('button',{name:/新增$/}).click();const dialog=page.getByRole('dialog');const name='e2e_'+Date.now();await dialog.getByLabel('用户名',{exact:true}).fill(name);await dialog.getByLabel('姓名',{exact:true}).fill('端到端测试');await dialog.getByLabel('所属部门').click();await page.getByTitle('应用开发组',{exact:true}).click();await dialog.getByLabel('初始密码').fill('E2e-password-2026!');await dialog.getByRole('button',{name:'确 定'}).click();
+ const row=page.getByRole('row').filter({hasText:name});await expect(row).toBeVisible();await row.getByRole('button',{name:'分配角色'}).click();await page.getByRole('dialog').getByRole('button',{name:'确 定'}).click();await expect(page.getByText('角色已更新')).toBeVisible();
+ await row.getByRole('button',{name:'删除',exact:true}).click();await page.getByRole('button',{name:'确 定'}).click();await expect(row).toHaveCount(0);
+ await page.getByRole('menuitem',{name:'操作审计'}).click();await expect(page.getByRole('cell',{name:'新增用户',exact:true}).first()).toBeVisible();await page.screenshot({path:'test-results/admin-audit.png',fullPage:true});
+ await page.getByRole('button',{name:/退出$/}).click();await expect(page.getByRole('button',{name:'登录工作空间'})).toBeVisible();
+});
+test('普通员工只能看到自己的记录且没有写入按钮',async({page})=>{await page.goto('/');await page.getByLabel('账号',{exact:true}).fill('employee');await page.getByLabel('密码',{exact:true}).fill('Employee-local-2026!');await page.getByRole('button',{name:'登录工作空间'}).click();await page.getByRole('menuitem',{name:'用户管理'}).click();await expect(page.getByRole('cell').filter({hasText:'employee'})).toBeVisible();await expect(page.getByRole('button',{name:'新增',exact:true})).toHaveCount(0);await expect(page.getByRole('menuitem',{name:'角色管理'})).toHaveCount(0);});
