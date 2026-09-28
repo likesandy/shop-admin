@@ -135,3 +135,7 @@ scripts/          开发、契约、覆盖率、部署与恢复
 `SystemController` 保留原 HTTP 路由、鉴权与审计入口，委托 UserService、RoleService、DepartmentService、PermissionService、AuditQueryService、OverviewService 及原有 DictService。原 SystemService 已移除。六组拆分业务各有独立 Repository，封装 SQL 与已有 MyBatis-Plus 调用，事务、业务规则及提交后事件发布仍由 Service 管理。
 
 数据范围由 DataScope 提供，部门展示缓存仍由 DeptCache 管理；本轮未调整认证模块、字典缓存和审计写入链路的职责。用户修改、删除、角色分配、个人改密必须在同一服务事务内先锁用户行，再校验和写入。后端拆分验证记录见 [backend-refactoring.md](docs/backend-refactoring.md)。
+
+## GitHub CI 状态
+
+私有仓库为 [likesandy/shop-admin](https://github.com/likesandy/shop-admin)，主分支 main。[首次完整 CI](https://github.com/likesandy/shop-admin/actions/runs/36397408929) 已通过，包含统一后端门禁、前端验证与镜像构建，staging 未启用。当前 GitHub 套餐不支持此私有仓库的分支保护，因此自动检查已生效，但失败禁止合并尚未强制生效。细节见 [github-ci.md](docs/github-ci.md)。
