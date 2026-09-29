@@ -82,14 +82,16 @@ GitHub Actions 的 verify 在 PR 和 main push 执行。仓库管理员需把 `v
 
 ## CRUD 代码生成
 
-生成器要求表使用单列 `BIGINT id` 主键，支持常见字符串、整数、布尔、日期和小数列。它读取数据库元数据，输出 Entity、Mapper、Service、Controller 和 React CRUD 页面；生成结果不会自动进入运行模块。
+生成器要求表使用单列 `BIGINT id` 主键且至少有一个可写业务字段，支持常见字符串、整数、布尔、日期和小数列。它读取数据库元数据，输出 Entity、Input DTO、Mapper、Service、Controller 和 React CRUD 页面；生成结果不会自动进入运行模块。
 
 ```bash
 DB_URL='jdbc:mysql://localhost:3306/shop_admin' DB_USER=shop_admin DB_PASSWORD='...' \
   bash scripts/generate-crud.sh sys_dict dictionaries generated/sys_dict
 ```
 
-先检查生成结果、补输入校验和业务规则，再复制后端文件到 `admin-system`，配置权限码与菜单，导出 OpenAPI 并将前端页面改为类型化 client 调用。生成页只是起步模板；集成后补真实断言的测试，才进入 CI。已有文件不会被生成器覆盖。
+模板按元数据生成必填/字符串长度校验，主键不进入输入 DTO。存在 `BIGINT NOT NULL owner_id` 时，归属人由服务端设置，非管理员的读写查询均限制为本人；没有归属字段时默认仅管理员可操作。具体业务规则、部门范围和前端页面仍需评审接入，已有文件不会被生成器覆盖。
+
+`admin-generated-example` 已提供完整后端验收样例：模板一致性检查 → 编译 → 真实 MySQL/HTTP 业务测试 → OpenAPI 快照与类型客户端 → 生成代码逐类 ≥50% 覆盖率。详见 [生成业务代码测试闭环](docs/generated-business-acceptance.md)。该模块不被生产启动模块依赖，不向现有数据库添加示例表。
 
 自动 staging：配置带 staging 标签的 self-hosted runner、staging environment、对应 secrets，并设置仓库变量 STAGING_ENABLED=true 和 STAGING_URL。部署后流水线会检查该 URL，并以 15 分钟为超时门槛。代码已关联公开仓库 likesandy/shop-admin；staging 尚未启用，未执行真实上线。
 
@@ -105,6 +107,7 @@ backend/
   admin-audit/    切面、独立事务 outbox、异步转存
   admin-starter/  启动、迁移、配置、集成测试
   admin-generator/  JDBC 元数据与 FreeMarker CRUD 脚手架
+  admin-generated-example/  生成业务代码、MySQL 验收和契约示例
 frontend/         管理界面与端到端测试
 docs/openapi.json API 契约快照
 scripts/          开发、契约、覆盖率、部署与恢复
@@ -114,7 +117,7 @@ scripts/          开发、契约、覆盖率、部署与恢复
 
 - 本地收尾清单、异常重启和告警验收见 [后端最终验收](docs/backend-final-acceptance.md)。可选指标采集的启动方式见 [监控说明](docs/monitoring.md)。
 - 本地 Docker Compose 部署、容器重建持久化及独立环境备份恢复已通过，见 [本地部署验收记录](docs/compose-acceptance.md)。无需测试服务器即可复现；远程 staging 尚未验收。
-- 后端当前共 41 个测试通过：H2 HTTP 13 个、MySQL HTTP/并发 17 个、MySQL + Redis 缓存 4 个、数据范围单测 4 个、迁移升级 1 个、生成器 1 个、独立指标认证 1 个，零失败、零跳过。
+- 后端当前共 48 个测试通过：H2 HTTP 13 个、MySQL HTTP/并发 17 个、MySQL + Redis 缓存 4 个、数据范围单测 4 个、迁移升级 1 个、生成器 3 个、独立指标认证 1 个、生成业务 MySQL 测试 5 个，零失败、零跳过；另有 8 个门禁自测。
 - 核心类及拆分后的服务/仓储行覆盖率门槛为 70%，包含字典、部门缓存、审计和指标认证；生成器为 50%。门禁入口为 `bash scripts/verify-backend.sh`。
 - 前端 TypeScript 类型检查及 Vite 生产构建通过。
 - Playwright 管理员与普通员工两条浏览器用例已在本地通过；仍需在 CI 环境复验。
@@ -122,13 +125,13 @@ scripts/          开发、契约、覆盖率、部署与恢复
 - 审计 outbox 使用同步独立事务持久化，再异步归档；若数据库完全不可用，记录错误日志，不能承诺零丢失。
 - 角色/权限/部门写入及角色分配仅内置超级管理员可用；主管不能修改持有高权限角色的用户，避免通过重置密码提权。
 - 菜单当前为一级结构，自定义菜单只管理元数据；新增业务页面仍需实现前端页面与后端鉴权。
-- 生成器已提供脚手架，但生成业务代码需要人工评审、测试与契约接入。微服务、多租户未实现。
+- 生成业务记录示例已完成后端测试与契约闭环；其他业务表仍需各自评审和测试，不能自动继承示例的验收结论。微服务、多租户未实现。
 
 ## 契约与交付验收补充
 
 - 表单使用独立 UI 类型和显式请求映射，避免 `any` 绕过 OpenAPI。执行 `cd frontend && npm run test:contract`，会在内存中模拟字段改名、类型变化和新增必填字段，确认生产表单映射拒绝这些破坏性变更；不会修改契约文件。
 - `DataScopeRulesTest` 使用 Mockito 独立验证默认拒绝、本人、全部及部门子树与多角色并集。HTTP 集成测试继续覆盖数据库与接口链路。
-- 覆盖率检查对 AuthService、Tokens、DataScope 和拆分后的六组业务服务/仓储分别要求 ≥70%，生成器自身 ≥50%。这不等于生成 CRUD 已达到 50%：产物仍需集成到业务模块，补充业务测试并纳入独立覆盖率规则。
+- 覆盖率检查对手写核心业务类要求 ≥70%，生成器自身 ≥50%；生成示例的 Controller、Service、Entity、Input 分别要求 ≥50%，缺少生成业务测试或覆盖率报告同样阻断门禁。
 - staging 验证页面可访问及未登录 API 返回 401，并从 GitHub workflow 创建时间计算到验收完成的总耗时，包含验证任务和 runner 排队，超过 900 秒判失败。该起点接近 push 触发，但不包含 GitHub 接收事件前的延迟；真实 push 时间验收仍需结合平台事件记录。
 - 远程验收：将项目关联目标 GitHub 仓库；main 开启 PR 与必需 `verify` 检查；配置 staging runner、secrets、URL 及 `STAGING_ENABLED=true`；确认 environment 无人工审批要求。用失败测试 PR 验证无法合并，再用成功 main push 留存工作流、staging URL 与耗时证据。本地配置通过不代表以上远程设置已完成。
 

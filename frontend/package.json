@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "generate:api": "openapi-typescript ../docs/openapi.json -o src/api/schema.d.ts",
     "test:e2e": "playwright test",
-    "test:contract": "node scripts/check-contract.mjs"
+    "test:contract": "node scripts/check-contract.mjs && node scripts/check-generated-contract.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
